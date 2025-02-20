@@ -1,17 +1,6 @@
 const $ = new Env('Network Monitor')
 const NAME = 'network-monitor'
 
-// 网络制式的映射关系
-const RADIO_TYPES = {
-    'CTRadioAccessTechnologyLTE': '4G',
-    'CTRadioAccessTechnologyNR': '5G',
-    'CTRadioAccessTechnologyWCDMA': '3G',
-    'CTRadioAccessTechnologyeHRPD': '3G',
-    'CTRadioAccessTechnologyCDMA1x': '2G',
-    'CTRadioAccessTechnologyEdge': '2G',
-    'CTRadioAccessTechnologyGPRS': '2G'
-}
-
 // 信号强度等级
 const SIGNAL_LEVELS = {
     EXCELLENT: '很好',
@@ -19,12 +8,6 @@ const SIGNAL_LEVELS = {
     FAIR: '一般',
     POOR: '较差',
     BAD: '很差'
-}
-
-// 获取友好的网络制式名称
-function getRadioType(radio) {
-    if (!radio) return '未知'
-    return RADIO_TYPES[radio] || radio
 }
 
 // 评估信号强度
@@ -35,26 +18,6 @@ function evaluateSignalStrength(strength) {
     if (strength >= -75) return SIGNAL_LEVELS.FAIR;
     if (strength >= -85) return SIGNAL_LEVELS.POOR;
     return SIGNAL_LEVELS.BAD;
-}
-
-// 安全的对象打印函数
-function safeStringify(obj, indent = 2) {
-    let cache = [];
-    const retVal = JSON.stringify(
-        obj,
-        (key, value) => {
-            if (typeof value === 'object' && value !== null) {
-                if (cache.includes(value)) return '[Circular]';
-                cache.push(value);
-            } else if (typeof value === 'function') {
-                return '[Function]';
-            }
-            return value;
-        },
-        indent
-    );
-    cache = null;
-    return retVal;
 }
 
 let arg
@@ -93,8 +56,6 @@ if (typeof $argument != 'undefined') {
             if ($network.cellular) {
                 const cellular = $network.cellular
                 currentState.carrier = cellular.carrier
-                currentState.radio = cellular.radio
-                currentState.radioType = getRadioType(cellular.radio)
                 if (typeof cellular.strength === 'number') {
                     currentState.signalStrength = cellular.strength
                     currentState.signalLevel = evaluateSignalStrength(cellular.strength)
@@ -121,10 +82,6 @@ if (typeof $argument != 'undefined') {
             if (cellular.carrierName && cellular.carrierName !== '--') {
                 currentState.carrier = cellular.carrierName
             }
-            if (cellular.currentRadioAccessTechnology) {
-                currentState.radio = cellular.currentRadioAccessTechnology
-                currentState.radioType = getRadioType(cellular.currentRadioAccessTechnology)
-            }
             if (typeof cellular.signalStrength === 'number') {
                 currentState.signalStrength = cellular.signalStrength
                 currentState.signalLevel = evaluateSignalStrength(cellular.signalStrength)
@@ -138,10 +95,7 @@ if (typeof $argument != 'undefined') {
 
     if (lastNetworkState.type !== currentState.type || 
         (currentState.type === 'WiFi' && lastNetworkState.ssid !== currentState.ssid) ||
-        (currentState.type === 'Cellular' && (
-            lastNetworkState.carrier !== currentState.carrier ||
-            lastNetworkState.radioType !== currentState.radioType
-        ))) {
+        (currentState.type === 'Cellular' && lastNetworkState.carrier !== currentState.carrier)) {
         
         let title = '网络状态变更'
         let subtitle = ''
@@ -157,13 +111,8 @@ if (typeof $argument != 'undefined') {
                 body = wifiDetails.join('\n')
                 break
             case 'Cellular':
+                subtitle = `已切换至蜂窝网络`
                 let details = []
-                if (currentState.radioType) {
-                    subtitle = `已切换至 ${currentState.radioType} 网络`
-                    details.push(`网络制式: ${currentState.radioType}`)
-                } else {
-                    subtitle = `已切换至蜂窝数据`
-                }
                 if (currentState.carrier) {
                     details.push(`运营商: ${currentState.carrier}`)
                 }
@@ -189,7 +138,7 @@ if (typeof $argument != 'undefined') {
             let title = '信号强度更新'
             let subtitle = currentState.type === 'WiFi' ? 
                 `WiFi: ${currentState.ssid}` : 
-                `${currentState.radioType || '蜂窝数据'}`;
+                '蜂窝网络';
             let body = `信号强度: ${currentState.signalLevel}`
             
             $.msg(title, subtitle, body)
