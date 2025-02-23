@@ -172,7 +172,7 @@ async function getNetworkState() {
             notify(
                 title, 
                 subtitle || '网络状态更新', 
-                body.join('\n') || '网络环境已变更'
+                body.join('\n')
             )
             
             // 保存新状态
